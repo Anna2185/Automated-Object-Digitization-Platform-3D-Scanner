@@ -56,7 +56,7 @@ void setup() {
   Serial.println("Sensor working");
 
   distanceSensor.setDistanceMode(VL53L1X::Short); //set the short distance setting, accurate under 1.3m
-  distanceSensor.setMeasurementTime(20000); //20ms max per reading
+  distanceSensor.setMeasurementTimingBudget(20000); //20ms max per reading
   distanceSensor.startContinuous(20);
 
   ///Set-up Motors
@@ -86,7 +86,9 @@ void scan(){
 
       //output the raw coordinates "level angle distance" format
       Serial.print(level); 
+      Serial.println(",");
       Serial.print(currentAngle); 
+      Serial.println(",");
       Serial.print(readingMm);
 
       //Rotate Stepper
