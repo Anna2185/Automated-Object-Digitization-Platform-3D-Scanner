@@ -5,126 +5,116 @@
 
 /* PINS SET UP
 Stepper Motor (ULN2003 Driver): 
-  VCC to + (battery 2)  
-  GND to - (battery 2)
-  IN1 IN2 IN3 IN4 to D8 D9 D10 D11 respectively
+  VCC -> + (battery 2)  
+  GND -> - (battery 2)
+  IN1 IN2 IN3 IN4 -> D8 D9 D10 D11 
 
 VL53L1X Sensor: 
-  VCC to 5V (Arduino) 
-  GND to GND (Arduino)
-  SDA to SDA (Arduino I2C Bus)
-  SCL to SCL (Arduino I2C Bus)
-  GPI01 to D2
-  XSHUT to 3.3V 
+  VCC -> 5V (Arduino) 
+  GND -> GND (Arduino)
+  SDA -> SDA (Arduino I2C Bus)
+  SCL -> SCL (Arduino I2C Bus)
+  GPI01 -> D2
+  XSHUT -> 3.3V 
 
 Servo Motor: 
-  VCC to + (battery 1)
-  GND to - (battery 1) & GND (Arduino)
-  Signal to D6
+  VCC -> + (battery 1)
+  GND -> - (battery 1) & GND (Arduino)
+  Signal -> D6
 */
 
 
 /* STEPPER MOTOR SETTINGS */
-
 //standard for 28BYJ-48 Stepper
 const int stepsPerRevolution = 2048; 
 
 //2048 steps/72 positions = ~28 steps per 5°
-const int RotationSteps_5 = 28; 
+const int rotationSteps = 28; 
 
 //15 vertical levels (1 cm increments = 15cm span)
-const int TotalHeightLevels = 15;   
+const int totalHeightLevels = 15;   
 
 
-/* Pin Defitions */
-Stepper turntable(stepsPerRevolution, 8, 10, 9, 11); //IN1 IN3 IN2 IN4 pattern
+/* Pin Defitions/Objects */
+Stepper turntable(stepsPerRevolution, 8, 9, 10, 11); //IN1 IN2 IN3 IN4 pattern
 Servo linearAxis;
 VL53L1X distanceSensor;
 
 
-
-
-
-
-
-
-
-
-
-
-
-//----------Remove after this----------
-//Sensor
-VL53L1X sensor;
-
-//Settings
-int stepsPerScan = 120;
-float currentHeight = 0;
-
 void setup() {
-  //set up serial 
   Serial.begin(115200);
   Wire.begin();
+  Wire.setClock(400000);
 
-  delay(1000);
+  ///Initialize Sensor
+  distanceSensor.setTimeout(500);
 
-  sensor.setTimeout(500);
-  if (!sensor.init()) {
-    Serial.println("Sensor fail");
+  if (!distanceSensor.init()) {
+    Serial.println("SENSOR FAILED");
     while (1);
   }
+  Serial.println("Sensor working");
 
-  sensor.setDistanceMode(VL53L1X::Long);
-  sensor.setMeasurementTimingBudget(50000);
-  sensor.startContinuous(50);
+  distanceSensor.setDistanceMode(VL53L1X::Short); //set the short distance setting, accurate under 1.3m
+  distanceSensor.setMeasurementTime(20000); //20ms max per reading
+  distanceSensor.startContinuous(20);
 
-  stepper.setSpeed(10);
+  ///Set-up Motors
+  turntable.setSpeed(12); //high speed for stepper
+  linearAxis.attach(6);   //modified servo signal wire on D6
+  linearAxis.write(90);   //90 is complete stop
 
-  Serial.println("READY");
+  Serial.println("System Ready. Starting Scan in 3 Seconds:  ");
+  delay(3000);
+  scan();
 }
 
-void loop() {
+void loop(){}
 
-  if (Serial.available()) {
-    String cmd = Serial.readStringUntil('\n');
-    cmd.trim();
+void scan(){
+  //Height Levels Loop
+  for (int level = 0; level < totalHeightLevels; level++){
+    Serial.print("Scanning at level:");
+    Serial.println(level);
 
-    // ---- SET HEIGHT ----
-    if (cmd.startsWith("H:")) {
-      currentHeight = cmd.substring(2).toFloat();
+    //Stepper Rotation Loop
+    for (int angleCount = 0; angleCount < 72; angleCount++){
+      int currentAngle = angleCount*5; //mult by 5 since its per 5 deg angles
+
+      //read sensor
+      uint16_t readingMm = distanceSensor.read();
+
+      //output the raw coordinates "level angle distance" format
+      Serial.print(level); 
+      Serial.print(currentAngle); 
+      Serial.print(readingMm);
+
+      //Rotate Stepper
+      turntable.step(rotationSteps);
+
+      delay(100); 
     }
 
-    // ---- RUN SCAN ----
-    if (cmd == "SCAN") {
+    //Move sensor up (using servo)
+    if (level < (totalHeightLevels -1)) {
+      Serial.println("moving up");
 
-      Serial.println("START");
+      //rotate servo up
+      /* continous servo rotation
+        90 = stop
+        <90 = down
+        >90 = up
+      */
+      linearAxis.write(110); 
 
-      for (int i = 0; i < stepsPerScan; i++) {
+      delay(1250); //modify based on the physical travel of the gear
 
-        float angle = i * (360.0 / stepsPerScan);
-        float rad = angle * PI / 180.0;
+      //stop the servo fully
+      linearAxis.write(90);
 
-        int dist_mm = sensor.read();
-        float dist = dist_mm / 10.0;
-
-        if (!sensor.timeoutOccurred() && dist > 0 && dist < 400) {
-
-          float x = dist * cos(rad);
-          float y = dist * sin(rad);
-          float z = currentHeight;
-
-          Serial.print(x);
-          Serial.print(",");
-          Serial.print(y);
-          Serial.print(",");
-          Serial.println(z);
-        }
-
-        stepper.step(stepsPerRevolution / stepsPerScan);
-        delay(20);
-      }
-
-      Serial.println("END");
+      delay(500);
     }
   }
+  Serial.println("Scan complete");
 }
+
