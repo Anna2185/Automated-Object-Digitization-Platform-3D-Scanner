@@ -101,7 +101,7 @@ void scan(){
       //Rotate Stepper
       turntable.step(rotationSteps);
 
-      delay(100); 
+      delay(100); //might want to change it to 50 eventually
     }
 
     //Move sensor up (using servo)
