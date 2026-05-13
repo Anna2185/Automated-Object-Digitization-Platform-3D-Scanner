@@ -84,7 +84,14 @@ void scan(){
       //read sensor
       uint16_t readingMm = distanceSensor.read();
 
-      //output the raw coordinates "level angle distance" format
+      //skip invalid readings
+      if (distanceSensor.timeoutOccurred()) {
+        Serial.println("TIMEOUT");
+        continue;
+      }
+
+      //output the raw coordinates 
+      //"level angle distance" format
       Serial.print(level); 
       Serial.println(",");
       Serial.print(currentAngle); 
