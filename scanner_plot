@@ -5,75 +5,99 @@ import numpy as np
 import matplotlib.pyplot as plt
 import trimesh
 
-# -------- AUTO PORT --------
+#Detect the port automatically
 def find_port():
     ports = serial.tools.list_ports.comports()
+
     for p in ports:
         print("Using:", p.device)
         return p.device
     return None
+
 
 port = find_port()
 if not port:
     print("No Arduino found")
     exit()
 
+#Connect to port
 ser = serial.Serial(port, 115200, timeout=1)
 time.sleep(2)
-
 print("Connected")
 
+#Store the points
 points = []
+print("Waiting for data...\n")
 
-# -------- LAYERS --------
-layers = [0, 1, 2, 3, 4, 5]   # cm heights
 
-for h in layers:
+#Read Serial 
+while True:
+    line = ser.readline().decode(errors='ignore').strip()
 
-    input(f"\nMove sensor to {h} cm, then press ENTER...")
+    if not line:
+        continue
+    print(line)
 
-    # send height
-    ser.write(f"H:{h}\n".encode())
-    time.sleep(0.3)
+    #stop condition
+    if "Scan Complete" in line:
+        break
 
-    # start scan
-    ser.write(b"SCAN\n")
+    #skip text lines
+    if "," not in line:
+        continue
 
-    while True:
-        line = ser.readline().decode(errors='ignore').strip()
+    try:
+        #Arduino sends: level,angle,distance
+        level, angle, distance = map(float, line.split(","))
 
-        if not line:
-            continue
+        #convert angle to radians
+        angle_rad = np.radians(angle)
 
-        print(line)
+        #polar -> Cartesian
+        x = distance * np.cos(angle_rad)
+        y = distance * np.sin(angle_rad)
+        z = level * 10   # convert cm -> mm
 
-        if line == "START":
-            continue
+        points.append([x, y, z])
 
-        if line == "END":
-            print("Layer done")
-            break
+    except:
+        pass
 
-        if "," in line:
-            try:
-                x, y, z = map(float, line.split(","))
-                points.append([x, y, z])
-            except:
-                pass
 
-# -------- PROCESS DATA --------
+#check
+if len(points) == 0:
+    print("No scan points received")
+    exit()
+
+
+#numpy
 points = np.array(points)
 
-# -------- PLOT --------
+/* Plot the data */
 fig = plt.figure()
+
 ax = fig.add_subplot(111, projection='3d')
-ax.scatter(points[:,0], points[:,1], points[:,2])
+
+ax.scatter(
+    points[:, 0],
+    points[:, 1],
+    points[:, 2],
+    s=2
+)
+
+ax.set_xlabel("X")
+ax.set_ylabel("Y")
+ax.set_zlabel("Z")
+
 plt.show()
 
-# -------- STL --------
+
+#generate the STL file
 print("Generating STL...")
 
+#point cloud -> mesh
 mesh = trimesh.points.PointCloud(points).convex_hull
-mesh.export("scan_output.stl")
 
-print("STL saved")
+#export STL file
+mesh.export("scan_output.stl")
+print("STL saved as scan_output.stl")
