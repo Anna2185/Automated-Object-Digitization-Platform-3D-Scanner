@@ -1,1 +1,1 @@
-# Automated-Object-Digitization-Platform-
+# Automated-Object-Digitization-Platform
