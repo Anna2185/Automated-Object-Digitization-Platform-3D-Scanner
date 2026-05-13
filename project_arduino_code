@@ -1,0 +1,81 @@
+#include <Wire.h>
+#include <VL53L1X.h>
+#include <Stepper.h>
+
+//-------- STEPPER --------
+const int stepsPerRevolution = 2048;
+Stepper stepper(stepsPerRevolution, 8, 9, 10, 11);
+
+// -------- SENSOR --------
+VL53L1X sensor;
+
+// -------- SETTINGS --------
+int stepsPerScan = 120;
+float currentHeight = 0;
+
+void setup() {
+  Serial.begin(115200);
+  Wire.begin();
+
+  delay(1000);
+
+  sensor.setTimeout(500);
+  if (!sensor.init()) {
+    Serial.println("Sensor fail");
+    while (1);
+  }
+
+  sensor.setDistanceMode(VL53L1X::Long);
+  sensor.setMeasurementTimingBudget(50000);
+  sensor.startContinuous(50);
+
+  stepper.setSpeed(10);
+
+  Serial.println("READY");
+}
+
+void loop() {
+
+  if (Serial.available()) {
+    String cmd = Serial.readStringUntil('\n');
+    cmd.trim();
+
+    // ---- SET HEIGHT ----
+    if (cmd.startsWith("H:")) {
+      currentHeight = cmd.substring(2).toFloat();
+    }
+
+    // ---- RUN SCAN ----
+    if (cmd == "SCAN") {
+
+      Serial.println("START");
+
+      for (int i = 0; i < stepsPerScan; i++) {
+
+        float angle = i * (360.0 / stepsPerScan);
+        float rad = angle * PI / 180.0;
+
+        int dist_mm = sensor.read();
+        float dist = dist_mm / 10.0;
+
+        if (!sensor.timeoutOccurred() && dist > 0 && dist < 400) {
+
+          float x = dist * cos(rad);
+          float y = dist * sin(rad);
+          float z = currentHeight;
+
+          Serial.print(x);
+          Serial.print(",");
+          Serial.print(y);
+          Serial.print(",");
+          Serial.println(z);
+        }
+
+        stepper.step(stepsPerRevolution / stepsPerScan);
+        delay(20);
+      }
+
+      Serial.println("END");
+    }
+  }
+}
