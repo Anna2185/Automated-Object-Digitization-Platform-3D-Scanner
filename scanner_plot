@@ -76,4 +76,4 @@ print("Generating STL...")
 mesh = trimesh.points.PointCloud(points).convex_hull
 mesh.export("scan_output.stl")
 
-print("✅ STL saved")
+print("STL saved")
