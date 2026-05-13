@@ -1,19 +1,68 @@
 #include <Wire.h>
 #include <VL53L1X.h>
 #include <Stepper.h>
+#include <Servo.h>
 
-//-------- STEPPER --------
-const int stepsPerRevolution = 2048;
-Stepper stepper(stepsPerRevolution, 8, 9, 10, 11);
+/* PINS SET UP
+Stepper Motor (ULN2003 Driver): 
+  VCC to + (battery 2)  
+  GND to - (battery 2)
+  IN1 IN2 IN3 IN4 to D8 D9 D10 D11 respectively
 
-// -------- SENSOR --------
+VL53L1X Sensor: 
+  VCC to 5V (Arduino) 
+  GND to GND (Arduino)
+  SDA to SDA (Arduino I2C Bus)
+  SCL to SCL (Arduino I2C Bus)
+  GPI01 to D2
+  XSHUT to 3.3V 
+
+Servo Motor: 
+  VCC to + (battery 1)
+  GND to - (battery 1) & GND (Arduino)
+  Signal to D6
+*/
+
+
+/* STEPPER MOTOR SETTINGS */
+
+//standard for 28BYJ-48 Stepper
+const int stepsPerRevolution = 2048; 
+
+//2048 steps/72 positions = ~28 steps per 5°
+const int RotationSteps_5 = 28; 
+
+//15 vertical levels (1 cm increments = 15cm span)
+const int TotalHeightLevels = 15;   
+
+
+/* Pin Defitions */
+Stepper turntable(stepsPerRevolution, 8, 10, 9, 11); //IN1 IN3 IN2 IN4 pattern
+Servo linearAxis;
+VL53L1X distanceSensor;
+
+
+
+
+
+
+
+
+
+
+
+
+
+//----------Remove after this----------
+//Sensor
 VL53L1X sensor;
 
-// -------- SETTINGS --------
+//Settings
 int stepsPerScan = 120;
 float currentHeight = 0;
 
 void setup() {
+  //set up serial 
   Serial.begin(115200);
   Wire.begin();
 
