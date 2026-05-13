@@ -1,0 +1,79 @@
+import serial
+import time
+import serial.tools.list_ports
+import numpy as np
+import matplotlib.pyplot as plt
+import trimesh
+
+# -------- AUTO PORT --------
+def find_port():
+    ports = serial.tools.list_ports.comports()
+    for p in ports:
+        print("Using:", p.device)
+        return p.device
+    return None
+
+port = find_port()
+if not port:
+    print("No Arduino found")
+    exit()
+
+ser = serial.Serial(port, 115200, timeout=1)
+time.sleep(2)
+
+print("Connected")
+
+points = []
+
+# -------- LAYERS --------
+layers = [0, 1, 2, 3, 4, 5]   # cm heights
+
+for h in layers:
+
+    input(f"\nMove sensor to {h} cm, then press ENTER...")
+
+    # send height
+    ser.write(f"H:{h}\n".encode())
+    time.sleep(0.3)
+
+    # start scan
+    ser.write(b"SCAN\n")
+
+    while True:
+        line = ser.readline().decode(errors='ignore').strip()
+
+        if not line:
+            continue
+
+        print(line)
+
+        if line == "START":
+            continue
+
+        if line == "END":
+            print("Layer done")
+            break
+
+        if "," in line:
+            try:
+                x, y, z = map(float, line.split(","))
+                points.append([x, y, z])
+            except:
+                pass
+
+# -------- PROCESS DATA --------
+points = np.array(points)
+
+# -------- PLOT --------
+fig = plt.figure()
+ax = fig.add_subplot(111, projection='3d')
+ax.scatter(points[:,0], points[:,1], points[:,2])
+plt.show()
+
+# -------- STL --------
+print("Generating STL...")
+
+mesh = trimesh.points.PointCloud(points).convex_hull
+mesh.export("scan_output.stl")
+
+print("✅ STL saved")
