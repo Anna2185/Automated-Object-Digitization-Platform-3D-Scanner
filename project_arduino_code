@@ -31,8 +31,16 @@ const int stepsPerRevolution = 2048;
 //2048 steps/72 positions = ~28 steps per 5°
 const int rotationSteps = 28; 
 
-//15 vertical levels (1 cm increments = 15cm span)
-const int totalHeightLevels = 15;   
+//75 vertical levels (2 mm increments = 15cm span)
+const int totalHeightLevels = 75;   
+
+//Servo Settings
+//bottom/start angle
+const int servoStartPos = 180;
+//amount to move upward each layer
+const int servoStepPerLayer = 5;
+//current servo position
+int servoPosition = servoStartPos;
 
 
 /* Pin Defitions/Objects */
@@ -61,19 +69,35 @@ void setup() {
 
   ///Set-up Motors
   turntable.setSpeed(12); //high speed for stepper
-  linearAxis.attach(6);   //modified servo signal wire on D6
-  linearAxis.write(90);   //90 is complete stop
+
+  linearAxis.attach(6);
+  delay(500);
+  // move to known starting position
+  servoPosition = servoStartPos;
+  linearAxis.write(servoPosition);
+  Serial.println("Vertical axis back to original position");
+  delay(1000);
 
   Serial.println("System Ready. Starting Scan in 3 Seconds:  ");
   delay(3000);
-  scan();
 }
 
-void loop(){}
+void loop() {
+  if (Serial.available()) {
+    String cmd = Serial.readStringUntil('\n');
+    cmd.trim();
+
+    if (cmd == "SCAN") {
+
+      scan();
+    }
+  }
+}
 
 void scan(){
   //Height Levels Loop
   for (int level = 0; level < totalHeightLevels; level++){
+    delay(300);
     Serial.print("Scanning at level:");
     Serial.println(level);
 
@@ -92,38 +116,40 @@ void scan(){
 
       //output the raw coordinates 
       //"level angle distance" format
-      Serial.print(level); 
-      Serial.println(",");
-      Serial.print(currentAngle); 
-      Serial.println(",");
-      Serial.print(readingMm);
+      Serial.print(level);
+      Serial.print(",");
+      Serial.print(currentAngle);
+      Serial.print(",");
+      Serial.println(readingMm);
 
       //Rotate Stepper
       turntable.step(rotationSteps);
 
-      delay(100); //might want to change it to 50 eventually
+      delay(50); //might want to change it to 50 eventually
     }
 
     //Move sensor up (using servo)
     if (level < (totalHeightLevels -1)) {
       Serial.println("moving up");
 
-      //rotate servo up
-      /* continous servo rotation
-        90 = stop
-        <90 = down
-        >90 = up
-      */
-      linearAxis.write(110); 
+      //move upward one level
+      servoPosition -= servoStepPerLayer;
 
-      delay(1250); //modify based on the physical travel of the gear
+      //limit range
+      servoPosition = constrain(servoPosition, 0, 180);
 
-      //stop the servo fully
-      linearAxis.write(90);
+      linearAxis.write(servoPosition);
 
       delay(500);
     }
   }
-  Serial.println("Scan complete");
-}
+  Serial.println("Scan Complete");
 
+  //Return to start
+  Serial.println("Returning to bottom");
+
+  // return to start position
+  servoPosition = servoStartPos;
+  linearAxis.write(servoPosition);
+  delay(1000);
+}
