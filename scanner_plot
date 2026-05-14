@@ -5,7 +5,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 import trimesh
 
-#Detect the port automatically
+"Detect the port automatically"
 def find_port():
     ports = serial.tools.list_ports.comports()
 
@@ -24,13 +24,14 @@ if not port:
 ser = serial.Serial(port, 115200, timeout=1)
 time.sleep(2)
 print("Connected")
+ser.write(b"SCAN\n")
 
 #Store the points
 points = []
 print("Waiting for data...\n")
 
 
-#Read Serial 
+"Read Serial"
 while True:
     line = ser.readline().decode(errors='ignore').strip()
 
@@ -73,7 +74,7 @@ if len(points) == 0:
 #numpy
 points = np.array(points)
 
-/* Plot the data */
+" Plot the data "
 fig = plt.figure()
 
 ax = fig.add_subplot(111, projection='3d')
