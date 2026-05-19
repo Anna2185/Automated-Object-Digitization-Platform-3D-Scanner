@@ -1,229 +1,212 @@
 import serial
-import time
 import serial.tools.list_ports
+import time
 import numpy as np
 import matplotlib.pyplot as plt
 import trimesh
 
-def find_port():
+
+def find_arduino_port():
     ports = serial.tools.list_ports.comports()
-    for p in ports:
-        print("Using:", p.device)
-        return p.device
-    return None
+    print("\nAvailable ports:")
+    for port in ports:
+        print(f"  {port.device}: {port.description}")
 
-port = find_port()
-if not port:
-    print("No Arduino found")
-    exit()
-
-ser = serial.Serial(port, 115200, timeout=1)
-time.sleep(2)
-
-print("Connected")
-ser.write(b"SCAN\n")
-
-points = []
-
-print("Waiting for data...\n")
-
-# ---- CONFIG ----
-TOTAL_LAYERS = 75
-Z_STEP_MM = 2.0   # adjust if each layer is ~2mm physically
-
-while True:
-    line = ser.readline().decode(errors='ignore').strip()
-
-    if not line:
-        continue
-
-    print(line)
-
-    if "scan complete" in line.lower():
-        break
-
-    if "," not in line:
-        continue
-
-    try:
-        level, angle, distance = map(float, line.split(","))
-
-        angle_rad = np.radians(angle)
-
-        SCANNER_RADIUS = 120  # mm
-        r = SCANNER_RADIUS - distance
-
-        x = r * np.cos(angle_rad)
-        y = r * np.sin(angle_rad)
-
-        #FIXED Z SCALING FOR 75 LAYERS
-        z = level * Z_STEP_MM
-
-        points.append([x, y, z])
-
-    except:
-        pass
-
-if len(points) == 0:
-    print("No scan points received")
-    exit()
-
-points = np.array(points)
-
-# ---- PLOT ----
-fig = plt.figure()
-ax = fig.add_subplot(111, projection='3d')
-
-ax.scatter(points[:, 0], points[:, 1], points[:, 2], s=2)
-
-ax.set_xlabel("X")
-ax.set_ylabel("Y")
-ax.set_zlabel("Z")
-
-plt.show()
-
-# ---- STL ----
-print("Generating STL...")
-
-mesh = trimesh.points.PointCloud(points).convex_hull
-mesh.export("scan_output.stl")
-
-print("STL saved as scan_output.stl")
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-import serial
-import time
-import serial.tools.list_ports
-import numpy as np
-import matplotlib.pyplot as plt
-import trimesh
-
-"Detect the port automatically"
-def find_port():
-    ports = serial.tools.list_ports.comports()
-
-    for p in ports:
-        print("Using:", p.device)
-        return p.device
+    keywords = ["arduino", "ch340", "usb serial", "cp210x"]
+    for port in ports:
+        desc_lower = port.description.lower()
+        if any(kw in desc_lower for kw in keywords):
+            print(f"\nSelected: {port.device}")
+            return port.device
     return None
 
 
-port = find_port()
-if not port:
-    print("No Arduino found")
-    exit()
-
-#Connect to port
-ser = serial.Serial(port, 115200, timeout=1)
-time.sleep(2)
-print("Connected")
-ser.write(b"SCAN\n")
-
-#Store the points
-points = []
-print("Waiting for data...\n")
+def get_scan_height():
+    max_height = 15.0
+    while True:
+        try:
+            height = float(input(f"\nEnter object height (cm, max {max_height}): "))
+            if 0 < height <= max_height:
+                return height
+            else:
+                print(f"Please enter a value between 0 and {max_height}")
+        except ValueError:
+            print("Invalid input. Please enter a number.")
 
 
-"Read Serial"
-while True:
-    line = ser.readline().decode(errors='ignore').strip()
+def connect_to_arduino(port):
+    print("\nConnecting to Arduino...")
+    # Initialize port WITHOUT opening it immediately
+    ser = serial.Serial()
+    ser.port = port
+    ser.baudrate = 115200
+    ser.timeout = 1
+    ser.open()  # This triggers the initial hardware reset
 
-    if not line:
-        continue
-    print(line)
+    print("Forcing hardware reset...")
+    ser.setDTR(False)  # Drop DTR line
+    ser.setRTS(False)  # Drop RTS line
+    time.sleep(0.5)
+    ser.setDTR(True)  # Pull DTR back up to trigger clean reboot
+    ser.setRTS(True)
 
-    #stop condition
-    if "Scan Complete" in line:
-        break
+    # CRITICAL: Allow the Arduino bootloader to completely finish booting
+    print("Waiting for Arduino bootloader to finish...")
+    time.sleep(3.0)
 
-    #skip text lines
-    if "," not in line:
-        continue
+    # Flush out all corrupted garbage bytes accumulated during the reboot
+    ser.reset_input_buffer()
+
+    print("Listening for READY signal (up to 20 seconds)...\n")
+    timeout = 20
+    start_time = time.time()
+    ready_found = False
+
+    while time.time() - start_time < timeout:
+        try:
+            line = ser.readline().decode('utf-8', errors='ignore').strip()
+            if line:
+                print(f"  Received: {line}")
+                if "READY" in line:
+                    ready_found = True
+                    break
+        except Exception as e:
+            print(f"Error reading: {e}")
+
+    if not ready_found:
+        ser.close()
+        raise TimeoutError("Arduino did not send READY signal. Check port and code.")
+
+    print("\nArduino successfully synchronized and ready!\n")
+    return ser
+
+
+def read_scan_data(ser):
+    points = []
+    z_step_mm = 2.0
+    scanner_radius = 120.0
+
+    print("Reading scan data...\n")
+    timeout = 600  # Increased to 10 minutes (72 steps * 50ms * levels takes time)
+    start_time = time.time()
+
+    while time.time() - start_time < timeout:
+        try:
+            line = ser.readline().decode('utf-8', errors='ignore').strip()
+            if not line:
+                continue
+
+            print(line)
+
+            if "SCAN_COMPLETE" in line:
+                print("\nScan complete!")
+                break
+
+            if "[ERR]" in line:
+                print(f"Arduino error: {line}")
+                break
+
+            if line.startswith("[") or "," not in line:
+                continue
+
+            parts = line.split(",")
+            if len(parts) != 3:
+                continue
+
+            try:
+                level, angle, distance = map(float, parts)
+                angle_rad = np.radians(angle)
+                r = scanner_radius - distance
+
+                x = r * np.cos(angle_rad)
+                y = r * np.sin(angle_rad)
+                z = level * z_step_mm
+
+                points.append([x, y, z])
+            except (ValueError, IndexError):
+                continue
+
+        except Exception as e:
+            print(f"Read error: {e}")
+            break
+
+    return points
+
+
+def main():
+    port = find_arduino_port()
+    if not port:
+        print("Error: No Arduino found")
+        return
+
+    height_cm = get_scan_height()
+    ser = None
 
     try:
-        #Arduino sends: level,angle,distance
-        level, angle, distance = map(float, line.split(","))
+        ser = connect_to_arduino(port)
 
-        #convert angle to radians
-        angle_rad = np.radians(angle)
+        # Send the command
+        command = f"SCAN:{height_cm}\n"
+        print(f"Sending command: {command.strip()}")
+        ser.write(command.encode('utf-8'))
 
-        #polar -> Cartesian
-        x = distance * np.cos(angle_rad)
-        y = distance * np.sin(angle_rad)
-        z = level * 10   # convert cm -> mm
+        # Read the raw data stream
+        scanned_points = read_scan_data(ser)
+        print(f"\nSuccessfully collected {len(scanned_points)} data points.")
 
-        points.append([x, y, z])
+        if len(scanned_points) < 4:
+            print("Error: Not enough points collected to generate a 3D model.")
+            return
 
-    except:
-        pass
+        # --- 1. EXPORT TO STL USING TRIMESH ---
+        print("\nProcessing point cloud into a 3D mesh...")
+        pts = np.array(scanned_points)
+
+        # Generate a surface mesh using Convex Hull (works best for solid shapes)
+        mesh = trimesh.convex.convex_hull(pts)
+
+        # Save the mesh as an STL file
+        output_filename = "scanned_object.stl"
+        mesh.export(output_filename)
+        print(f" Success! 3D model saved to your folder as: '{output_filename}'")
+
+        # --- 2. PLOT THE DATA IN 3D USING MATPLOTLIB ---
+        print("Opening 3D visualizer window...")
+        fig = plt.figure(figsize=(10, 8))
+        ax = fig.add_subplot(111, projection='3d')
+
+        # Scatter plot of the points colored by height (Z-axis)
+        scatter = ax.scatter(pts[:, 0], pts[:, 1], pts[:, 2], c=pts[:, 2], cmap='viridis', s=5)
+
+        # Labels and styling
+        ax.set_xlabel('X (mm)')
+        ax.set_ylabel('Y (mm)')
+        ax.set_zlabel('Z (mm)')
+        ax.set_title('3D Scanner Point Cloud')
+        fig.colorbar(scatter, ax=ax, label='Height (mm)')
+
+        # Force equal scaling so the object isn't stretched
+        max_range = np.array([pts[:, 0].max() - pts[:, 0].min(),
+                              pts[:, 1].max() - pts[:, 1].min(),
+                              pts[:, 2].max() - pts[:, 2].min()]).max() / 2.0
+        mid_x = (pts[:, 0].max() + pts[:, 0].min()) * 0.5
+        mid_y = (pts[:, 1].max() + pts[:, 1].min()) * 0.5
+        mid_z = (pts[:, 2].max() + pts[:, 2].min()) * 0.5
+        ax.set_xlim(mid_x - max_range, mid_x + max_range)
+        ax.set_ylim(mid_y - max_range, mid_y + max_range)
+        ax.set_zlim(mid_z - max_range, mid_z + max_range)
+
+        plt.show()
+
+    except TimeoutError as e:
+        print(f"Error: {e}")
+    except Exception as e:
+        print(f"An unexpected error occurred: {e}")
+    finally:
+        if ser and ser.is_open:
+            ser.close()
+            print("Serial port closed safely.")
 
 
-#check
-if len(points) == 0:
-    print("No scan points received")
-    exit()
-
-
-#numpy
-points = np.array(points)
-
-" Plot the data "
-fig = plt.figure()
-
-ax = fig.add_subplot(111, projection='3d')
-
-ax.scatter(
-    points[:, 0],
-    points[:, 1],
-    points[:, 2],
-    s=2
-)
-
-ax.set_xlabel("X")
-ax.set_ylabel("Y")
-ax.set_zlabel("Z")
-
-plt.show()
-
-
-#generate the STL file
-print("Generating STL...")
-
-#point cloud -> mesh
-mesh = trimesh.points.PointCloud(points).convex_hull
-
-#export STL file
-mesh.export("scan_output.stl")
-print("STL saved as scan_output.stl")
+if __name__ == "__main__":
+    main()
