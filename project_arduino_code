@@ -23,133 +23,178 @@ Servo Motor:
   Signal -> D6
 */
 
+// Pin definitions
+const int STEPPER_IN1 = 8;
+const int STEPPER_IN2 = 9;
+const int STEPPER_IN3 = 10;
+const int STEPPER_IN4 = 11;
+const int SERVO_PIN = 6;
 
-/* STEPPER MOTOR SETTINGS */
-//standard for 28BYJ-48 Stepper
-const int stepsPerRevolution = 2048; 
+// Stepper motor configuration
+const int STEPS_PER_REVOLUTION = 2048;
+const int ROTATION_STEPS = 28;
+const float Z_RESOLUTION_MM = 2.0;
+const float MAX_HEIGHT_MM = 150.0;
 
-//2048 steps/72 positions = ~28 steps per 5°
-const int rotationSteps = 28; 
-
-//75 vertical levels (2 mm increments = 15cm span)
-const int totalHeightLevels = 75;   
-
-//Servo Settings
-//bottom/start angle
-const int servoStartPos = 180;
-//amount to move upward each layer
-const int servoStepPerLayer = 5;
-//current servo position
-int servoPosition = servoStartPos;
+// Servo configuration
+const int SERVO_START_POS = 180;
+const int SERVO_END_POS = 60;
+// Change # to whatever number of servo degrees equals exactly 1 mm of physical lift on your rig
+const float SERVO_DEGREES_PER_MM = 0.6; 
 
 
-/* Pin Defitions/Objects */
-Stepper turntable(stepsPerRevolution, 8, 9, 10, 11); //IN1 IN2 IN3 IN4 pattern
+// Objects
+Stepper turntable(STEPS_PER_REVOLUTION, STEPPER_IN1, STEPPER_IN3, STEPPER_IN2, STEPPER_IN4);
 Servo linearAxis;
 VL53L1X distanceSensor;
 
+// State
+float servoPosition = SERVO_START_POS;
+int totalHeightLevels = 0;
+float servoStepPerLayer = 0.0;
+boolean scanning = false;
+bool systemReady = false;
 
 void setup() {
   Serial.begin(115200);
+  
+  // Wait for serial to stabilize
+  delay(2000);
+  Serial.println("BOOTING");
+  // Clear any garbage data
+  while (Serial.available()) {
+    Serial.read();
+  }
+  
   Wire.begin();
   Wire.setClock(400000);
 
-  ///Initialize Sensor
+  // Initialize sensor
   distanceSensor.setTimeout(500);
-
   if (!distanceSensor.init()) {
-    Serial.println("SENSOR FAILED");
-    while (1);
+    Serial.println("[ERR] Sensor init failed");
+    while (1) {
+      delay(1000);
+    }
   }
-  Serial.println("Sensor working");
 
-  distanceSensor.setDistanceMode(VL53L1X::Short); //set the short distance setting, accurate under 1.3m
-  distanceSensor.setMeasurementTimingBudget(20000); //20ms max per reading
+  distanceSensor.setDistanceMode(VL53L1X::Short);
+  distanceSensor.setMeasurementTimingBudget(20000);
   distanceSensor.startContinuous(20);
 
-  ///Set-up Motors
-  turntable.setSpeed(12); //high speed for stepper
+  // Initialize stepper
+  turntable.setSpeed(12);
 
-  linearAxis.attach(6);
+  // Initialize servo
+  linearAxis.attach(SERVO_PIN);
   delay(500);
-  // move to known starting position
-  servoPosition = servoStartPos;
-  linearAxis.write(servoPosition);
-  Serial.println("Vertical axis back to original position");
+  servoPosition = SERVO_START_POS;
+  linearAxis.write((int)servoPosition);
   delay(1000);
 
-  Serial.println("System Ready. Starting Scan in 3 Seconds:  ");
-  delay(3000);
+  // Send ready signal multiple times to ensure it's received
+  Serial.println("[INIT] System booted");
+  delay(100);
+  Serial.println("READY");
+  delay(100);
+  Serial.println("READY");
+  
+  scanning = false;
+  delay(1000);
+  Serial.println("READY");
+  Serial.flush();
+  Serial.println("READY");
+  systemReady = true;
 }
 
 void loop() {
-  if (Serial.available()) {
+  if (!systemReady) return;
+  
+  if (Serial.available() > 0) {
     String cmd = Serial.readStringUntil('\n');
     cmd.trim();
 
-    if (cmd == "SCAN") {
+    Serial.print("[CMD] ");
+    Serial.println(cmd);
 
-      scan();
+        if (cmd.startsWith("SCAN:")) {
+      String heightStr = cmd.substring(5);
+      float objectHeightCm = heightStr.toFloat();
+      float objectHeightMm = objectHeightCm * 10.0;
+
+      if (objectHeightMm <= 0 || objectHeightMm > MAX_HEIGHT_MM) {
+        Serial.println("[ERR] Invalid height");
+        return;
+      }
+
+      // 1. Calculate how many total levels are needed based on user input
+      totalHeightLevels = (int)(objectHeightMm / Z_RESOLUTION_MM);
+
+      // 2. CRITICAL FIX: Step size is now fixed and independent of object height!
+      // This ensures a consistent 2mm lift regardless of total layers.
+      servoStepPerLayer = Z_RESOLUTION_MM * SERVO_DEGREES_PER_MM;
+
+      Serial.print("[DBG] Total levels calculated: ");
+      Serial.println(totalHeightLevels);
+      Serial.print("[DBG] Fixed Servo step degrees: ");
+      Serial.println(servoStepPerLayer);
+
+      // Move to start position
+      servoPosition = SERVO_START_POS;
+      linearAxis.write((int)servoPosition);
+      delay(1000);
+
+      scanning = true;
+      performScan();
+      scanning = false;
+      
+      Serial.println("SCAN_COMPLETE"); 
     }
   }
 }
 
-void scan(){
-  //Height Levels Loop
-  for (int level = 0; level < totalHeightLevels; level++){
+
+void performScan() {
+  for (int level = 0; level < totalHeightLevels; level++) {
     delay(300);
-    Serial.print("Scanning at level:");
-    Serial.println(level);
 
-    //Stepper Rotation Loop
-    for (int angleCount = 0; angleCount < 72; angleCount++){
-      int currentAngle = angleCount*5; //mult by 5 since its per 5 deg angles
+    for (int angleCount = 0; angleCount < 72; angleCount++) {
+      int currentAngle = angleCount * 5;
 
-      //read sensor
       uint16_t readingMm = distanceSensor.read();
 
-      //skip invalid readings
       if (distanceSensor.timeoutOccurred()) {
-        Serial.println("TIMEOUT");
         continue;
       }
 
-      //output the raw coordinates 
-      //"level angle distance" format
+      // Output data: level,angle,distance
       Serial.print(level);
       Serial.print(",");
       Serial.print(currentAngle);
       Serial.print(",");
       Serial.println(readingMm);
 
-      //Rotate Stepper
-      turntable.step(rotationSteps);
-
-      delay(50); //might want to change it to 50 eventually
+      turntable.step(ROTATION_STEPS);
+      delay(50);
     }
 
-    //Move sensor up (using servo)
-    if (level < (totalHeightLevels -1)) {
-      Serial.println("moving up");
-
-      //move upward one level
+    // Move servo up
+    if (level < (totalHeightLevels - 1)) {
       servoPosition -= servoStepPerLayer;
-
-      //limit range
-      servoPosition = constrain(servoPosition, 0, 180);
-
-      linearAxis.write(servoPosition);
-
+      
+      // Ensure we don't exceed your predefined physical limits
+      servoPosition = constrain(servoPosition, SERVO_END_POS, SERVO_START_POS);
+      
+      // round() ensures smooth, accurate accumulation of degrees
+      linearAxis.write(round(servoPosition)); 
       delay(500);
     }
+
   }
-  Serial.println("Scan Complete");
 
-  //Return to start
-  Serial.println("Returning to bottom");
-
-  // return to start position
-  servoPosition = servoStartPos;
-  linearAxis.write(servoPosition);
+  // Return to start
+  servoPosition = SERVO_START_POS;
+  linearAxis.write((int)servoPosition);
   delay(1000);
+
 }
