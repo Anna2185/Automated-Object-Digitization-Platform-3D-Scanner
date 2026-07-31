@@ -33,7 +33,7 @@ This takes the cleaned point cloud and turns it into a 3D mesh using Open3D. The
 This file includes all the functions from the main.py, connection.py, scanning.py, point_cloud.py, excel_export.py and mesh.py files. This was the original file I coded in, then once everything was working, I seperated all the files into parts to have better structure with actual functions and allow proper documentation. 
 
 ## Pin Setup
-**Stepper Motor (ULN2003 Driver): **
+**Stepper Motor (ULN2003 Driver):**
 VCC -> + (battery 2)  
 GND -> - (battery 2)
 IN1 IN2 IN3 IN4 -> D8 D9 D10 D11 
@@ -46,7 +46,7 @@ SCL -> SCL (Arduino I2C Bus)
 GPI01 -> D2
 XSHUT -> 3.3V 
 
-**Servo Motor: **
+**Servo Motor:**
 VCC -> + (battery 1)
 GND -> - (battery 1) & GND (Arduino)
 Signal -> D6
