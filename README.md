@@ -37,11 +37,11 @@ The Arduino handles the physical scanning and sends the measurements to the comp
 * **Signal** -> Arduino Digital Pin **D6**
 
 ## How It Works
-1. **Upload**: First, the user should open `hardware_control.ino` on Arduino IDE and upload the code to the Arduino
-2. **Launch**: Once that's done the user should run `main.py` and select the Arduino's serial port. They are then asked to enter the height of the object being scanned in cm
+1. **Upload**: First, the user should open `hardware_control.ino` on Arduino IDE and upload the code to the actual Arduino board (have the board connected to your laptop prior to this)
+2. **Launch**: Once that's done run `main.py` and select the Arduino's serial port. You will then be asked to enter the height of the object being scanned in cm
 3. **Trigger**: Python sends the height to the Arduino using a command such as `SCAN:10`
 4. **Scan**: The Arduino then scans the object by taking distance measurements every 5 degrees as the stepper rotates. After one full rotation, the servo moves the sensor up by 1 mm and the process repeats until the full height of the object has been scanned
-5. **Stream**: The Arduino sends each measurement back to Python as the height, angle and distance
+5. **Stream**: The Arduino sends each measurement back to Python in the format of "height, angle, distance"
 6. **Process**: Python converts these measurements into 3D coordinates and then uses them to create the point cloud and mesh
 
 ## Output
@@ -58,4 +58,4 @@ After the scan is finished, the program creates three main files:
 *Note: The current scanner is set up for a maximum object height of 15 cm, with 1 mm vertical resolution and measurements taken every 5 degrees around the object*
 
 ## Author
-AM G. - [GitHub Profile](https://github.com)
+AM G. - [GitHub Profile](https://github.com/Anna2185)
