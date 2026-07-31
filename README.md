@@ -1,6 +1,6 @@
 ## Copyright
-* Copyright © 2026 <b>AM G.</b>. All rights reserved. 
-* This code is published strictly for portfolio demonstration and review purposes. No permission is granted to copy, modify, distribute or use this software for any other purpose.
+Copyright © 2026 <b>AM G.</b>. All rights reserved. 
+This code is published strictly for portfolio demonstration and review purposes. No permission is granted to copy, modify, distribute or use this software for any other purpose.
 
 
 # 3D Scanner
