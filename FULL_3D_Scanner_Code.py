@@ -16,7 +16,6 @@ from openpyxl import Workbook
 #has to match the baud rate set in the Arduino code
 BAUD_RATE = 115200
 
-
 #PHYSICAL SCANNER GEOMETRY
 #distance in mm from the Rotation axis to the VL53L1X sensor
 #rotation axis center---distance--> Sensor
@@ -30,7 +29,6 @@ MAX_SENSOR_DISTANCE_MM = 400.0
 
 #minimum sensor reading distance (in mm)
 MIN_SENSOR_DISTANCE_MM = 1.0
-
 
 #OUTPUT FILES
 #output files names for the data
@@ -71,13 +69,11 @@ def find_port():
             print("Please enter a valid number")
 
 
-
 #SELECT PORT
 port = find_port()
 if not port:
     print("No serial devices found. Please connect your arduino to a port and try again")
     exit()
-
 
 
 #SERIAL CONNECTION
@@ -91,7 +87,6 @@ print("\nConnected to:", port)
 
 #clear old serial data if any
 ser.reset_input_buffer()
-
 
 
 #GET OBJECT HEIGHT
@@ -122,7 +117,6 @@ print("\nSending:", command.strip())
 ser.write(command.encode())
 
 print("\nscanning...\n")
-
 
 
 #DATA COLLECTION
