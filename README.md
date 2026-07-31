@@ -1,11 +1,11 @@
 ## Copyright
-Copyright © 2026 <b>AM G.</b>. All rights reserved. 
-This code is published strictly for portfolio demonstration and review purposes. No permission is granted to copy, modify, distribute or use this software for any other purpose.
+* Copyright © 2026 <b>AM G.</b>. All rights reserved. 
+* This code is published strictly for portfolio demonstration and review purposes. No permission is granted to copy, modify, distribute or use this software for any other purpose.
 
 
 # 3D Scanner
-This project is a custom 3D scanner that uses an Arduino, a VL53L1X distance sensor, a stepper motor, and a servo motor. The stepper rotates the object while the VL53L1X measures the distance to the object. The servo then moves the sensor vertically using a linear acutator system so the object can be scanned one layer at a time.
-The Arduino handles the physical scanning and sends the measurements to the computer through a serial connection. The Python program receives the data, converts it into 3D coordinates, and creates the different output files.
+* This project is a custom 3D scanner that uses an Arduino, a VL53L1X distance sensor, a stepper motor, and a servo motor. The stepper rotates the object while the VL53L1X measures the distance to the object. The servo then moves the sensor vertically using a linear acutator system so the object can be scanned one layer at a time.
+* The Arduino handles the physical scanning and sends the measurements to the computer through a serial connection. The Python program receives the data, converts it into 3D coordinates, and creates the different output files.
 
 ## Files
 **hardware_control.ino**
@@ -54,24 +54,24 @@ This file includes all the functions from the main.py, connection.py, scanning.p
 
 
 ## How It Works
-First, the user should open **hardware_control.ino** on Arduino IDE, upload the code to the arduino.
-Once that's done the user should run **main.py** and select the Arduino's serial port. They are then asked to enter the height of the object being scanned in cm.
-Python sends the height to the Arduino using a command such as SCAN:10.
-The Arduino then scans the object by taking distance measurements every 5 degrees as the stepper rotates. After one full rotation, the servo moves the sensor up by 1 mm and the process repeats until the full height of the object has been scanned.
-The Arduino sends each measurement back to Python as the height, angle, and distance.
-Python converts these measurements into 3D coordinates and then uses them to create the point cloud and mesh.
+* First, the user should open **hardware_control.ino** on Arduino IDE, upload the code to the arduino.
+* Once that's done the user should run **main.py** and select the Arduino's serial port. They are then asked to enter the height of the object being scanned in cm.
+* Python sends the height to the Arduino using a command such as "SCAN:10".
+* The Arduino then scans the object by taking distance measurements every 5 degrees as the stepper rotates. After one full rotation, the servo moves the sensor up by 1 mm and the process repeats until the full height of the object has been scanned.
+* The Arduino sends each measurement back to Python as the height, angle, and distance.
+* Python converts these measurements into 3D coordinates and then uses them to create the point cloud and mesh.
 
 ## Output
-After the scan is finished, the program creates three main files:
-**scan_data.xlsx:** contains the scan measurements and calculated coordinates.
-**clean_point_cloud.ply:** contains the cleaned 3D point cloud.
-**scan_output.stl:** contains the final 3D mesh.
+* After the scan is finished, the program creates three main files:
+* **scan_data.xlsx:** contains the scan measurements and calculated coordinates.
+* **clean_point_cloud.ply:** contains the cleaned 3D point cloud.
+* **scan_output.stl:** contains the final 3D mesh.
 
 ## Running the Project
-First upload **hardware_control.ino** to the Arduino and connect the Arduino to the computer.
-Make sure the required Python libraries are installed, then run: main.py
-Select the Arduino's serial port and enter the height of the object when prompted. The scanner will then run automatically and generate the output files when it is finished.
-The current scanner is set up for a maximum object height of 15 cm, with 1 mm vertical resolution and measurements taken every 5 degrees around the object.
+* First upload **hardware_control.ino** to the Arduino and connect the Arduino to the computer.
+* Make sure the required Python libraries are installed, then run: main.py
+* Select the Arduino's serial port and enter the height of the object when prompted. The scanner will then run automatically and generate the output files when it is finished.
+* The current scanner is set up for a maximum object height of 15 cm, with 1 mm vertical resolution and measurements taken every 5 degrees around the object.
 
 
 ## Author
