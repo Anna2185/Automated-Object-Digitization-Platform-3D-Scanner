@@ -1,1 +1,0 @@
-# Automated-Object-Digitization-Platform
