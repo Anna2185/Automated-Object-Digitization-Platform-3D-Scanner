@@ -15,7 +15,7 @@ The Arduino handles the physical scanning and sends the measurements to the comp
 * **point_cloud.py**: This handles the 3D point cloud. It displays the scanned points using Matplotlib and uses Open3D to clean up the point cloud and remove some of the noise. It also saves the cleaned point cloud as a PLY file.
 * **excel_export.py**: This saves the scan data into an Excel file. The file includes the height, angle, measured distance, and calculated X, Y, and Z coordinates.
 * **mesh.py**: This takes the cleaned point cloud and turns it into a 3D mesh using Open3D. The mesh is then exported as an STL file.
-* **FULL_3D_Scanner_Code.py**: This file includes all the functions from the main.py, connection.py, scanning.py, point_cloud.py, excel_export.py and mesh.py files. This was the original file I coded in, then once everything was working, I separated all the files into parts to have better structure with actual functions and allow proper documentation.
+* **FULL_3D_Scanner_Code.py**: This file is stored in an archive folder within the software_processing folder. It includes all the functions from the main.py, connection.py, scanning.py, point_cloud.py, excel_export.py and mesh.py files. This was the original file I coded in, then once everything was working, I separated all the files into parts to have better structure with actual functions and allow proper documentation.
 
 ## Pin Setup
 ### Stepper Motor (ULN2003 Driver)
