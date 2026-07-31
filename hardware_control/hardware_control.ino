@@ -1,5 +1,5 @@
-// Copyright © 2026 AM G. All rights reserved.
-// Published strictly for portfolio demonstration. See README.md for details.
+//Copyright © 2026 AM G. All rights reserved.
+//Published strictly for portfolio demonstration. See README.md for details.
 
 #include <Wire.h>
 #include <VL53L1X.h>
