@@ -2,7 +2,7 @@
 Copyright © 2026 <b>AM G.</b>. All rights reserved. 
 This code is published strictly for portfolio demonstration and review purposes. No permission is granted to copy, modify, distribute or use this software for any other purpose.
 
-## Automated Object Digitization Platform (3D-Scanner)
+# Automated Object Digitization Platform (3D-Scanner)
 This project is a custom 3D scanner that uses an Arduino, a VL53L1X distance sensor, a stepper motor, and a servo motor. The stepper rotates the object while the VL53L1X measures the distance to the object. The servo then moves the sensor vertically using a linear actuator system so the object can be scanned one layer at a time.
 
 The Arduino handles the physical scanning and sends the measurements to the computer through a serial connection. The Python program receives the data, converts it into 3D coordinates, and creates the different output files.
