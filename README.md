@@ -8,10 +8,10 @@ This project is a custom 3D scanner that uses an Arduino, a VL53L1X distance sen
 The Arduino handles the physical scanning and sends the measurements to the computer through a serial connection. The Python program receives the data, converts it into 3D coordinates, and creates the different output files.
 
 ## Files
-* **hardware_control.ino**: This is the Arduino code. It controls the stepper motor, servo motor and VL53L1X sensor. It receives the object height from Python, performs the scan and sends the measurements back to the computer. The scanner takes a measurement every 5 degrees while rotating and moves up 1 mm after each full rotation.
+* **hardware_control.ino**: This is the arduino code. It controls the stepper motor, servo motor and VL53L1X sensor. It receives the object height from Python, performs the scan and sends the measurements back to the computer. The scanner takes a measurement every 5 degrees while rotating and moves up 1 mm after each full rotation.
 * **main.py**: This is the main Python file. It connects all of the other Python files together. It connects to the Arduino, asks for the object height, starts the scan, collects the data, and then creates the Excel file, point cloud, and STL file.
 * **connection.py**: This handles the connection between the computer and Arduino. It finds the available serial ports and lets the user select whichever one is connected to the Arduino.
-* **scanning.py**: This handles the scanning process on the Python side. It asks the user for the object height, sends the scan command to the Arduino, and collects the measurements returned by the Arduino. It also converts the distance measurements into X, Y, and Z coordinates.
+* **scanning.py**: This handles the scanning process on the Python side. It asks the user for the object height, sends the scan command to the arduino, and collects the measurements returned by the arduino. It also converts the distance measurements into X, Y, and Z coordinates.
 * **point_cloud.py**: This handles the 3D point cloud. It displays the scanned points using Matplotlib and uses Open3D to clean up the point cloud and remove some of the noise. It also saves the cleaned point cloud as a PLY file.
 * **excel_export.py**: This saves the scan data into an Excel file. The file includes the height, angle, measured distance, and calculated X, Y, and Z coordinates.
 * **mesh.py**: This takes the cleaned point cloud and turns it into a 3D mesh using Open3D. The mesh is then exported as an STL file.
