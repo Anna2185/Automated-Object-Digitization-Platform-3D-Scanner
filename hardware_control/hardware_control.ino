@@ -7,7 +7,7 @@
 #include <Servo.h>
 #include <math.h>
 
-//Pin definitions
+//Pin definitions (can also be found in the README.md)
 /* PINS SET UP
 Stepper Motor (ULN2003 Driver): 
   VCC -> + (battery 2)  
