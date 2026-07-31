@@ -1,5 +1,5 @@
-# Copyright © 2026 AM G. All rights reserved.
-# Published strictly for portfolio demonstration. See README.md for details.
+#Copyright © 2026 AM G. All rights reserved.
+#Published strictly for portfolio demonstration. See README.md for details.
 
 import numpy as np
 from openpyxl import Workbook
