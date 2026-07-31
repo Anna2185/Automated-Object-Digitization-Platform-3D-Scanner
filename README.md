@@ -58,4 +58,4 @@ After the scan is finished, the program creates three main files:
 *Note: The current scanner is set up for a maximum object height of 15 cm, with 1 mm vertical resolution and measurements taken every 5 degrees around the object*
 
 ## Author
-AM G. - [GitHub Profile](https://github.com/Anna2185)
+AM G. - [https://github.com/Anna2185](https://github.com/Anna2185?tab=repositories)
